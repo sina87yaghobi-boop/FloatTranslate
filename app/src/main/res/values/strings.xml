@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">FloatTranslate</string>
+    <string name="a11y_description">Lets FloatTranslate read the selected or visible text on your screen, only when you tap the button in the translator panel and have given consent in the app.</string>
+</resources>
