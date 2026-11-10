@@ -38,14 +38,21 @@ class ScreenTextService : AccessibilityService() {
         return found
     }
 
-    fun visibleText(): String {
+    /** Every separate text block on screen (messages, labels...) in reading order. */
+    fun visibleTexts(): List<String> {
+        val first = collect(true)
+        return if (first.isNotEmpty()) first else collect(false)
+    }
+
+    private fun collect(onlyVisible: Boolean): List<String> {
         val out = LinkedHashSet<String>()
         fun walk(n: AccessibilityNodeInfo?, depth: Int) {
-            if (n == null || depth > 40 || n.isPassword || !n.isVisibleToUser) return
-            n.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let(out::add)
+            if (n == null || depth > 40 || n.isPassword || out.size >= 80) return
+            if (onlyVisible && !n.isVisibleToUser) return
+            n.text?.toString()?.trim()?.takeIf { it.length >= 2 }?.let { out.add(it.take(1500)) }
             for (i in 0 until n.childCount) walk(n.getChild(i), depth + 1)
         }
         roots().forEach { walk(it, 0) }
-        return out.joinToString("\n").take(3000)
+        return out.toList()
     }
 }

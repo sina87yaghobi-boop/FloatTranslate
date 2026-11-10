@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.FloatTranslate" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.FloatTranslate" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_bg</item>
+    </style>
 </resources>

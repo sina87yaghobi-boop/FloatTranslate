@@ -32,7 +32,7 @@ class TranslationRepository(private val ctx: Context) {
                 if (style != Style.STANDARD && key.isNotBlank()) {
                     llm(text, from, to, style, key) to null
                 } else {
-                    val note = if (style != Style.STANDARD) "Add an AI API key in the app to enable ${style.label} style. Showing Standard." else null
+                    val note = if (style != Style.STANDARD) "برای سبک «${style.label}» باید در برنامه کلید API وارد کنی. فعلاً ترجمه‌ی استاندارد نشان داده شد." else null
                     standard(text, from, to) to note
                 }
             }
@@ -42,21 +42,21 @@ class TranslationRepository(private val ctx: Context) {
         val src = if (from.code == "auto") "Autodetect" else from.code
         return chunk(text, 450).map { part ->
             val r = myMemory.translate(part, "$src|${to.code}")
-            val out = r.responseData?.translatedText ?: error("No translation returned")
-            if (out.contains("MYMEMORY WARNING", true)) error("Daily free limit reached. Try again later or set an AI key.")
+            val out = r.responseData?.translatedText ?: error("ترجمه‌ای دریافت نشد.")
+            if (out.contains("MYMEMORY WARNING", true)) error("سهمیه‌ی رایگان امروز تمام شده. بعداً امتحان کن یا کلید API وارد کن.")
             Html.fromHtml(out, Html.FROM_HTML_MODE_LEGACY).toString()
         }.joinToString("")
     }
 
     private suspend fun llm(text: String, from: Lang, to: Lang, style: Style, key: String): String {
-        val fromPart = if (from.code == "auto") "Detect the source language automatically." else "Source language: ${from.name}."
-        val system = "You are a translation engine. $fromPart Translate into ${to.name}. ${style.hint} " +
+        val fromPart = if (from.code == "auto") "Detect the source language automatically." else "Source language: ${from.en}."
+        val system = "You are a translation engine. $fromPart Translate into ${to.en}. ${style.hint} " +
             "Keep meaning, names and formatting. Output ONLY the translation."
         val res = chatApi(Prefs.baseUrl(ctx)).chat(
             "Bearer $key",
             ChatRequest(Prefs.model(ctx), listOf(ChatMsg("system", system), ChatMsg("user", text)))
         )
-        return res.choices?.firstOrNull()?.message?.content?.trim() ?: error("Empty response from AI service")
+        return res.choices?.firstOrNull()?.message?.content?.trim() ?: error("پاسخ خالی از سرویس هوش مصنوعی.")
     }
 
     private fun chunk(text: String, max: Int): List<String> {

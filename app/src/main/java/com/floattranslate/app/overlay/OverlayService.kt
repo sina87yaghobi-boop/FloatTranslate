@@ -19,7 +19,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -110,13 +111,13 @@ class OverlayService : Service() {
         )
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_bubble)
-            .setContentTitle("FloatTranslate is active")
-            .setContentText(if (bubbleVisible) "Bubble is visible" else "Bubble is hidden")
+            .setSmallIcon(R.drawable.ic_stat_translate)
+            .setContentTitle("مترجم شناور فعال است")
+            .setContentText(if (bubbleVisible) "حباب نمایان است" else "حباب پنهان است")
             .setContentIntent(open)
             .setOngoing(true)
-            .addAction(0, if (bubbleVisible) "Hide bubble" else "Show bubble", action(ACTION_TOGGLE, 1))
-            .addAction(0, "Stop", action(ACTION_STOP, 2))
+            .addAction(0, if (bubbleVisible) "پنهان کردن حباب" else "نمایش حباب", action(ACTION_TOGGLE, 1))
+            .addAction(0, "توقف", action(ACTION_STOP, 2))
             .build()
     }
 
@@ -141,13 +142,11 @@ class OverlayService : Service() {
         val v = ComposeView(this).apply {
             owner.attach(this)
             setContent {
-                FloatTheme {
-                    Box(
-                        Modifier.size(56.dp).shadow(8.dp, CircleShape).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Default.Translate, "Translate", tint = MaterialTheme.colorScheme.onPrimary) }
-                }
+                Image(
+                    painterResource(R.drawable.bubble_logo),
+                    contentDescription = "ترجمه",
+                    modifier = Modifier.size(56.dp).shadow(8.dp, CircleShape),
+                )
             }
         }
         attachDrag(v, p)
@@ -249,17 +248,21 @@ class OverlayService : Service() {
     // ---------- Actions ----------
     private fun share(text: String) {
         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
-        startActivity(Intent.createChooser(send, "Share translation").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        startActivity(Intent.createChooser(send, "اشتراک‌گذاری ترجمه").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         closePanel()
     }
 
     /** Runs only when the user taps the button AND has consented in the app. */
     private fun fetchScreen(selection: Boolean) {
-        if (!Prefs.screenConsent(this)) { vm.showMessage("Enable screen text access in the FloatTranslate app first."); return }
+        if (!Prefs.screenConsent(this)) { vm.showMessage("اول در برنامه، گزینه‌ی «موافقم» را برای خواندن متن صفحه روشن کن."); return }
         val svc = ScreenTextService.instance
-        if (svc == null) { vm.showMessage("Turn on the FloatTranslate accessibility service in Settings."); return }
-        val text = if (selection) svc.selectedText() else svc.visibleText()
-        if (text.isNullOrBlank()) vm.showMessage(if (selection) "No selected text found. Select text in the app first." else "No readable text found on screen.")
-        else vm.setInput(text)
+        if (svc == null) { vm.showMessage("سرویس دسترسی‌پذیری FloatTranslate روشن نیست. از تنظیمات دسترسی‌پذیری روشنش کن."); return }
+        if (selection) {
+            val t = svc.selectedText()
+            if (t.isNullOrBlank()) vm.showMessage("متن انتخاب‌شده‌ای پیدا نشد. اول متن را انتخاب کن.") else vm.useText(t)
+        } else {
+            val list = svc.visibleTexts()
+            if (list.isEmpty()) vm.showMessage("متنی روی صفحه پیدا نشد.") else vm.setScreenTexts(list)
+        }
     }
 }
