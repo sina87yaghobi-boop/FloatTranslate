@@ -40,12 +40,12 @@ class TranslationRepository(private val ctx: Context) {
 
     private suspend fun standard(text: String, from: Lang, to: Lang): String {
         val src = if (from.code == "auto") "Autodetect" else from.code
-        return chunk(text, 450).joinToString("") { part ->
+        return chunk(text, 450).map { part ->
             val r = myMemory.translate(part, "$src|${to.code}")
             val out = r.responseData?.translatedText ?: error("No translation returned")
             if (out.contains("MYMEMORY WARNING", true)) error("Daily free limit reached. Try again later or set an AI key.")
             Html.fromHtml(out, Html.FROM_HTML_MODE_LEGACY).toString()
-        }
+        }.joinToString("")
     }
 
     private suspend fun llm(text: String, from: Lang, to: Lang, style: Style, key: String): String {
