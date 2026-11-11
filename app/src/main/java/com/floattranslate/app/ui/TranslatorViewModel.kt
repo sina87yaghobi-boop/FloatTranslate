@@ -7,6 +7,7 @@ import com.floattranslate.app.data.Lang
 import com.floattranslate.app.data.Languages
 import com.floattranslate.app.data.Style
 import com.floattranslate.app.data.TranslationRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,6 +82,6 @@ class TranslatorViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(loading = true, message = null) }
         repo.translate(s.input.trim(), s.from, s.to, s.style)
             .onSuccess { (out, note) -> _state.update { it.copy(output = out, loading = false, message = note) } }
-            .onFailure { e -> _state.update { it.copy(loading = false, message = friendly(e)) } }
+            .onFailure { e -> if (e !is CancellationException) _state.update { it.copy(loading = false, message = friendly(e)) } }
     }
 }

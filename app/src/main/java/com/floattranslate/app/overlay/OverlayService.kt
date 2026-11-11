@@ -195,27 +195,91 @@ class OverlayService : Service() {
     }
 
     // ---------- Panel ----------
-    private class BackFrame(c: Context, var onBack: () -> Unit) : FrameLayout(c) {
+    private var panelParams: WindowManager.LayoutParams? = null
+    private var lastX = -1
+    private var lastY = -1
+    private var lastW = 0
+    private var lastH = 0
+
+    /** Panel window root: back key, drag the header to move, drag the bottom-right corner to resize. */
+    private inner class PanelFrame(c: Context, var onBack: () -> Unit) : FrameLayout(c) {
+        private val slop = ViewConfiguration.get(c).scaledTouchSlop
+        private var armed = 0 // 1 = move, 2 = resize
+        private var mode = 0
+        private var downX = 0f
+        private var downY = 0f
+        private var startX = 0
+        private var startY = 0
+        private var startW = 0
+        private var startH = 0
+
         override fun dispatchKeyEvent(e: KeyEvent): Boolean {
             if (e.keyCode == KeyEvent.KEYCODE_BACK && e.action == KeyEvent.ACTION_UP) { onBack(); return true }
             return super.dispatchKeyEvent(e)
+        }
+
+        override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
+            val p = panelParams ?: return false
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = e.rawX; downY = e.rawY
+                    startX = p.x; startY = p.y; startW = p.width; startH = p.height
+                    armed = when {
+                        e.x > width - 48.dp() && e.y > height - 48.dp() -> 2
+                        e.y < 64.dp() -> 1
+                        else -> 0
+                    }
+                    mode = 0
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (armed != 0 && mode == 0 && (abs(e.rawX - downX) > slop || abs(e.rawY - downY) > slop)) {
+                        mode = armed
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+
+        override fun onTouchEvent(e: MotionEvent): Boolean {
+            val p = panelParams ?: return false
+            val dm = resources.displayMetrics
+            when (e.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = (e.rawX - downX).toInt()
+                    val dy = (e.rawY - downY).toInt()
+                    if (mode == 1) {
+                        p.x = (startX + dx).coerceIn(0, maxOf(0, dm.widthPixels - p.width))
+                        p.y = (startY + dy).coerceIn(0, maxOf(0, dm.heightPixels - 120.dp()))
+                    } else if (mode == 2) {
+                        p.width = (startW + dx).coerceIn(minOf(260.dp(), dm.widthPixels), maxOf(260.dp(), dm.widthPixels - p.x))
+                        p.height = (startH + dy).coerceIn(minOf(260.dp(), dm.heightPixels), maxOf(260.dp(), dm.heightPixels - p.y))
+                    }
+                    if (mode != 0) wm.updateViewLayout(this, p)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> mode = 0
+            }
+            return true
         }
     }
 
     private fun openPanel() {
         if (panel != null) return
-        val screenW = resources.displayMetrics.widthPixels
+        val dm = resources.displayMetrics
+        val w = (if (lastW > 0) lastW else (dm.widthPixels * 0.92f).toInt()).coerceAtMost(dm.widthPixels)
+        val h = (if (lastH > 0) lastH else minOf((dm.heightPixels * 0.72f).toInt(), 640.dp())).coerceAtMost(dm.heightPixels)
         val p = WindowManager.LayoutParams(
-            (screenW * 0.92f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = 72.dp()
+            gravity = Gravity.TOP or Gravity.START
+            x = (if (lastX >= 0) lastX else (dm.widthPixels - w) / 2).coerceIn(0, maxOf(0, dm.widthPixels - w))
+            y = (if (lastY >= 0) lastY else 72.dp()).coerceIn(0, maxOf(0, dm.heightPixels - 120.dp()))
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
-        val root = BackFrame(this) { closePanel() }
+        panelParams = p
+        val root = PanelFrame(this) { closePanel() }
         val compose = ComposeView(this).apply {
             owner.attach(this)
             setContent {
@@ -241,8 +305,10 @@ class OverlayService : Service() {
     }
 
     private fun removePanel() {
+        panelParams?.let { lastX = it.x; lastY = it.y; lastW = it.width; lastH = it.height }
         panel?.let { runCatching { wm.removeView(it) } }
         panel = null
+        panelParams = null
     }
 
     // ---------- Actions ----------

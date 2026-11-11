@@ -46,7 +46,9 @@ fun TranslatorPanel(
 
     FloatTheme {
         val cs = MaterialTheme.colorScheme
+        Box(Modifier.fillMaxSize()) {
         Surface(
+            modifier = Modifier.fillMaxSize(),
             shape = RoundedCornerShape(28.dp),
             color = cs.surface,
             shadowElevation = 16.dp,
@@ -54,10 +56,9 @@ fun TranslatorPanel(
         ) {
             Column(
                 Modifier
-                    .heightIn(max = 600.dp)
+                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-                    .animateContentSize(),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // سربرگ
@@ -65,6 +66,7 @@ fun TranslatorPanel(
                     Image(painterResource(R.drawable.bubble_logo), null, Modifier.size(32.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("مترجم شناور", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.DragHandle, "جابه‌جایی پنل", tint = cs.outline)
                     IconButton(onClick = onClose) { Icon(Icons.Default.Close, "بستن") }
                 }
 
@@ -198,7 +200,15 @@ fun TranslatorPanel(
                 }
 
                 s.message?.let { Text(it, color = cs.error, style = MaterialTheme.typography.bodySmall) }
+                Spacer(Modifier.height(18.dp))
             }
+        }
+        // دستگیره‌ی تغییر اندازه (پایین-راست صفحه؛ چون چیدمان راست‌به‌چپ است BottomStart می‌شود)
+        Icon(
+            Icons.Default.OpenInFull, "تغییر اندازه",
+            Modifier.align(Alignment.BottomStart).padding(10.dp).size(18.dp),
+            tint = cs.outline,
+        )
         }
     }
 }

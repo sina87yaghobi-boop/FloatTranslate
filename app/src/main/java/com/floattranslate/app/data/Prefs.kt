@@ -9,8 +9,8 @@ object Prefs {
     fun setScreenConsent(c: Context, v: Boolean) = sp(c).edit().putBoolean("screen_consent", v).apply()
 
     fun apiKey(c: Context) = sp(c).getString("llm_key", "") ?: ""
-    fun baseUrl(c: Context) = sp(c).getString("llm_base", "https://api.openai.com/v1/") ?: "https://api.openai.com/v1/"
-    fun model(c: Context) = sp(c).getString("llm_model", "gpt-4o-mini") ?: "gpt-4o-mini"
+    fun baseUrl(c: Context) = sp(c).getString("llm_base", "https://generativelanguage.googleapis.com/v1beta/openai/") ?: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    fun model(c: Context) = sp(c).getString("llm_model", "gemini-3-flash-preview") ?: "gemini-3-flash-preview"
 
     fun saveLlm(c: Context, key: String, base: String, model: String) {
         val b = base.trim().let { if (it.endsWith("/")) it else "$it/" }

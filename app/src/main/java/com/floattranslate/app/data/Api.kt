@@ -1,5 +1,6 @@
 package com.floattranslate.app.data
 
+import com.google.gson.JsonElement
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -24,4 +25,16 @@ data class ChatResponse(val choices: List<ChatChoice>?)
 interface ChatApi {
     @POST("chat/completions")
     suspend fun chat(@Header("Authorization") auth: String, @Body body: ChatRequest): ChatResponse
+}
+
+// Google's free web translate endpoint (no key): much better quality than MyMemory
+interface GoogleApi {
+    @GET("translate_a/single")
+    suspend fun translate(
+        @Query("client") client: String,
+        @Query("sl") sl: String,
+        @Query("tl") tl: String,
+        @Query("dt") dt: String,
+        @Query("q") q: String,
+    ): JsonElement
 }
